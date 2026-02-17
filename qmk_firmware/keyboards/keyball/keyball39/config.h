@@ -77,3 +77,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // To squeeze firmware size
 #undef LOCKING_SUPPORT_ENABLE
 #undef LOCKING_RESYNC_ENABLE
+
+#define KEYBALL_REPORTMOUSE_INTERVAL 8
+#define KEYBALL_SCROLLBALL_INHIVITOR 200
+#define KEYBALL_SCROLLSNAP_TENSION_THRESHOLD 120
