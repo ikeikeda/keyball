@@ -79,5 +79,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #undef LOCKING_RESYNC_ENABLE
 
 #define KEYBALL_REPORTMOUSE_INTERVAL 8
-#define KEYBALL_SCROLLBALL_INHIVITOR 200
-#define KEYBALL_SCROLLSNAP_TENSION_THRESHOLD 120
+// スクロールモード切替直後の誤入力を捨てる時間 (ms)。デフォルト 50
+#define KEYBALL_SCROLLBALL_INHIVITOR 150
+// スクロール除数 n → 1/2^(n-1)。4=1/8, 5=1/16, 6=1/32, 7=1/64
+// 小さい逆方向の動きが 1 ティックになるのを抑える
+#define KEYBALL_SCROLL_DIV_DEFAULT 6
