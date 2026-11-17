@@ -185,6 +185,33 @@ __attribute__((weak)) void keyball_on_apply_motion_to_mouse_move(keyball_motion_
     m->y = 0;
 }
 
+typedef struct {
+    int8_t   direction;
+    uint32_t last_event;
+} scroll_reversal_state_t;
+
+static int8_t filter_scroll_reversal(int8_t value, scroll_reversal_state_t *state) {
+    if (value == 0) {
+        return 0;
+    }
+
+    uint32_t now       = timer_read32();
+    int8_t   direction = value > 0 ? 1 : -1;
+
+    if (state->direction == 0 || TIMER_DIFF_32(now, state->last_event) >= KEYBALL_SCROLL_REVERSE_TIMEOUT) {
+        state->direction  = direction;
+        state->last_event = now;
+        return value;
+    }
+
+    if (direction == state->direction) {
+        state->last_event = now;
+        return value;
+    }
+
+    return 0;
+}
+
 __attribute__((weak)) void keyball_on_apply_motion_to_mouse_scroll(keyball_motion_t *m, report_mouse_t *r, bool is_left) {
     // consume motion of trackball.
     int16_t div = 1 << (keyball_get_scroll_div() - 1);
@@ -233,6 +260,11 @@ __attribute__((weak)) void keyball_on_apply_motion_to_mouse_scroll(keyball_motio
             break;
     }
 #endif
+
+    static scroll_reversal_state_t horizontal = {0};
+    static scroll_reversal_state_t vertical   = {0};
+    r->h = filter_scroll_reversal(r->h, &horizontal);
+    r->v = filter_scroll_reversal(r->v, &vertical);
 }
 
 static void motion_to_mouse(keyball_motion_t *m, report_mouse_t *r, bool is_left, bool as_scroll) {

@@ -36,6 +36,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #    define KEYBALL_SCROLLBALL_INHIVITOR 50
 #endif
 
+#ifndef KEYBALL_SCROLL_REVERSE_TIMEOUT
+#    define KEYBALL_SCROLL_REVERSE_TIMEOUT 100
+#endif
+
 /// To disable scroll snap feature, define 0 in your config.h
 #ifndef KEYBALL_SCROLLSNAP_ENABLE
 #    define KEYBALL_SCROLLSNAP_ENABLE 2
