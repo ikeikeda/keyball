@@ -166,7 +166,17 @@ bool pmw3610_motion_read(pmw3610_motion_t *d) {
 #    define PMW3610_INIT_RETRY_DELAY_MS 200
 #endif
 
-static bool pmw3610_init_once(void) {
+void pmw3610_prepare(void) {
+    // PORT を先に High にしてから出力にする。逆順だと AVR は Low を一瞬駆動する。
+    writePinHigh(PMW3610_SCLK_PIN);
+    setPinOutput(PMW3610_SCLK_PIN);
+    writePinHigh(PMW3610_SDIO_PIN);
+    setPinOutput(PMW3610_SDIO_PIN);
+    writePinHigh(PMW3610_NCS_PIN);
+    setPinOutput(PMW3610_NCS_PIN);
+}
+
+bool pmw3610_init_attempt(void) {
     // POWER_UP_RESET は SPI クロック on/off で挟まない。
     // リセット直後の無通信時間を確保するため。
     pmw3610_reg_write_raw(PMW3610_POWER_UP_RESET, PMW3610_POWER_UP_CMD);
@@ -206,22 +216,14 @@ static bool pmw3610_init_once(void) {
 
 bool pmw3610_init(void) {
     debug_enable = true;
-
-    // AVR の setPinOutput は方向だけ変える。PORT が 0 のままだと NCS が
-    // Low 駆動になり、センサ電源立ち上がり時に SPI モードに入れなくなる。
-    setPinOutput(PMW3610_SCLK_PIN);
-    writePinHigh(PMW3610_SCLK_PIN);
-    setPinOutput(PMW3610_SDIO_PIN);
-    writePinHigh(PMW3610_SDIO_PIN);
-    setPinOutput(PMW3610_NCS_PIN);
-    writePinHigh(PMW3610_NCS_PIN);
+    pmw3610_prepare();
 
     wait_ms(PMW3610_INIT_DELAY_MS);
     for (uint8_t attempt = 0; attempt < PMW3610_INIT_RETRIES; attempt++) {
         if (attempt > 0) {
             wait_ms(PMW3610_INIT_RETRY_DELAY_MS);
         }
-        if (pmw3610_init_once()) {
+        if (pmw3610_init_attempt()) {
             return true;
         }
     }

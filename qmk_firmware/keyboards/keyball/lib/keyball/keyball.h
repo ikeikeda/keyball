@@ -74,7 +74,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define KEYBALL_TX_GETINFO_INTERVAL 500
 #define KEYBALL_TX_GETINFO_MAXTRY 10
+// スレーブのセンサが遅れても、このあいだは ballcnt=0 で交渉を確定しない。
+#define KEYBALL_TX_GETINFO_GRACE_MS 10000
 #define KEYBALL_TX_GETMOTION_INTERVAL 4
+#define KEYBALL_BALL_RETRY_INTERVAL 500
+#define KEYBALL_BALL_RETRY_MAX 16
 
 #if (PRODUCT_ID & 0xff00) == 0x0000
 #    define KEYBALL_MODEL 46

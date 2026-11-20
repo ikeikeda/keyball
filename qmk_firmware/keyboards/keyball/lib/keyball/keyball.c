@@ -133,17 +133,46 @@ static void add_scroll_div(int8_t delta) {
 //////////////////////////////////////////////////////////////////////////////
 // Pointing device driver
 
-#if KEYBALL_MODEL == 46
+#if KEYBALL_MODEL != 147
 void keyboard_pre_init_kb(void) {
-    keyball.this_have_ball = pmw3610_init();
+    // Keyball39 の SPI 初期化は split の USB 待ちのあと。
+    // その待ちのあいだ NCS が未駆動だと、TRRS 側のセンサ電源が上がる瞬間に
+    // Low 扱いになって SPI モードに入れなくなる。ここでは High にするだけ。
+    pmw3610_prepare();
     keyboard_pre_init_user();
 }
 #endif
 
+static void keyball_apply_cpi(void) {
+    uint8_t cpi = keyball_get_cpi();
+    pmw3610_cpi_set(cpi == 0 ? CPI_DEFAULT - 1 : cpi - 1);
+}
+
+static void keyball_try_init_ball(void) {
+    if (keyball.this_have_ball) {
+        return;
+    }
+    static uint32_t last  = 0;
+    static uint8_t  tries = 0;
+    if (tries >= KEYBALL_BALL_RETRY_MAX) {
+        return;
+    }
+    uint32_t now = timer_read32();
+    if (last != 0 && TIMER_DIFF_32(now, last) < KEYBALL_BALL_RETRY_INTERVAL) {
+        return;
+    }
+    last = now;
+    tries++;
+    if (!pmw3610_init_attempt()) {
+        return;
+    }
+    keyball.this_have_ball = true;
+    keyball_apply_cpi();
+}
+
 void pointing_device_driver_init(void) {
-#if KEYBALL_MODEL != 46
+    // split_pre_init の USB 待ちのあと。スレーブはここで初めて SPI する。
     keyball.this_have_ball = pmw3610_init();
-#endif
     if (keyball.this_have_ball) {
 #if defined(KEYBALL_PMW3360_UPLOAD_SROM_ID)
 #    if KEYBALL_PMW3360_UPLOAD_SROM_ID == 0x04
@@ -154,7 +183,7 @@ void pointing_device_driver_init(void) {
 #        error Invalid value for KEYBALL_PMW3360_UPLOAD_SROM_ID. Please choose 0x04 or 0x81 or disable it.
 #    endif
 #endif
-        pmw3610_cpi_set(CPI_DEFAULT - 1);
+        keyball_apply_cpi();
     }
 }
 
@@ -334,23 +363,32 @@ static void rpc_get_info_handler(uint8_t in_buflen, const void *in_data, uint8_t
 static void rpc_get_info_invoke(void) {
     static bool     negotiated = false;
     static uint32_t last_sync  = 0;
+    static uint32_t started    = 0;
     static int      round      = 0;
     uint32_t        now        = timer_read32();
+    if (started == 0) {
+        started = now;
+    }
     if (negotiated || TIMER_DIFF_32(now, last_sync) < KEYBALL_TX_GETINFO_INTERVAL) {
         return;
     }
     last_sync = now;
     round++;
     keyball_info_t recv = {0};
-    if (!transaction_rpc_exec(KEYBALL_GET_INFO, 0, NULL, sizeof(recv), &recv)) {
-        if (round < KEYBALL_TX_GETINFO_MAXTRY) {
-            dprintf("keyball:rpc_get_info_invoke: missed #%d\n", round);
+    bool           ok   = transaction_rpc_exec(KEYBALL_GET_INFO, 0, NULL, sizeof(recv), &recv);
+    bool           grace = TIMER_DIFF_32(now, started) < KEYBALL_TX_GETINFO_GRACE_MS;
+    if (!ok) {
+        dprintf("keyball:rpc_get_info_invoke: missed #%d\n", round);
+        if (grace || round < KEYBALL_TX_GETINFO_MAXTRY) {
             return;
         }
+    } else if (recv.ballcnt == 0 && grace) {
+        // スレーブがセンサを後から起こすことがある。0 のまま確定しない。
+        return;
     }
     negotiated             = true;
     keyball.that_enable    = true;
-    keyball.that_have_ball = recv.ballcnt > 0;
+    keyball.that_have_ball = ok && recv.ballcnt > 0;
     dprintf("keyball:rpc_get_info_invoke: negotiated #%d %d\n", round, keyball.that_have_ball);
 
     // split keyboard negotiation completed.
@@ -627,6 +665,7 @@ void keyboard_post_init_kb(void) {
 
 #if SPLIT_KEYBOARD
 void housekeeping_task_kb(void) {
+    keyball_try_init_ball();
     if (is_keyboard_master()) {
         rpc_get_info_invoke();
         if (keyball.that_have_ball) {

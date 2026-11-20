@@ -51,7 +51,11 @@ static uint8_t peek_matrix_intersection(pin_t out_pin, pin_t in_pin) {
 }
 
 bool is_keyboard_left(void) {
-    return !peek_matrix_intersection(keyball.this_have_ball ? F7 : F6, B5);
+    // 左手だけ F7（ボールあり）か F6（ボールなし）がジャンパされる。
+    // センサ初期化より前でも左右が決まるように、両方を見る。
+    bool ball   = !peek_matrix_intersection(F7, B5);
+    bool noball = !peek_matrix_intersection(F6, B5);
+    return ball || noball;
 }
 
 //////////////////////////////////////////////////////////////////////////////

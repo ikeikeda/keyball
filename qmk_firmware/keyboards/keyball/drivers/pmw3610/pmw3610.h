@@ -33,10 +33,18 @@ Modifications 2025 by Nobuki Inoue (your @black_trooper)
 //////////////////////////////////////////////////////////////////////////////
 // Top level API
 
+/// Drive NCS, SCLK and SDIO high without starting SPI.
+/// Call this as early as possible so the sensor rail can rise with NCS high.
+void pmw3610_prepare(void);
+
 /// pmw3610_init initializes PMW3610DM-T2QU module.
 /// Holds NCS high while the sensor rail settles, runs the datasheet
 /// power-up sequence (including OBSERVATION1), and retries on failure.
 bool pmw3610_init(void);
+
+/// One power-up sequence, without the initial settle delay or retry loop.
+/// NCS is left high. Used to retry after the TRRS rail has come up.
+bool pmw3610_init_attempt(void);
 
 typedef struct {
     int16_t x;
