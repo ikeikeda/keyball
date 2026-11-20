@@ -34,7 +34,8 @@ Modifications 2025 by Nobuki Inoue (your @black_trooper)
 // Top level API
 
 /// pmw3610_init initializes PMW3610DM-T2QU module.
-/// It will return true when succeeded, otherwise false.
+/// Holds NCS high while the sensor rail settles, runs the datasheet
+/// power-up sequence (including OBSERVATION1), and retries on failure.
 bool pmw3610_init(void);
 
 typedef struct {
@@ -60,17 +61,22 @@ void pmw3610_reg_write(uint8_t addr, uint8_t data);
 uint8_t pmw3610_reg_read(uint8_t addr);
 
 typedef enum {
-    PMW3610_PROD_ID        = 0x00,
-    PMW3610_REV_ID         = 0x01,
-    PMW3610_MOTION         = 0x02,
-    PMW3610_DELTA_X_L      = 0x03,
-    PMW3610_DELTA_Y_L      = 0x04,
-    PMW3610_DELTA_XY_H     = 0x05,
-    PMW3610_POWER_UP_RESET = 0x3A,
-    PMW3610_SPI_CLK_ON_REQ = 0x41,
-    PMW3610_SPI_PAGE0      = 0x7F,
-    PMW3610_RES_STEP       = 0x85,
-    PMW3610_SPI_PAGE1      = 0xFF
+    PMW3610_PROD_ID         = 0x00,
+    PMW3610_REV_ID          = 0x01,
+    PMW3610_MOTION          = 0x02,
+    PMW3610_DELTA_X_L       = 0x03,
+    PMW3610_DELTA_Y_L       = 0x04,
+    PMW3610_DELTA_XY_H      = 0x05,
+    PMW3610_PERFORMANCE     = 0x11,
+    PMW3610_RUN_DOWNSHIFT   = 0x1B,
+    PMW3610_REST1_RATE      = 0x1C,
+    PMW3610_REST1_DOWNSHIFT = 0x1D,
+    PMW3610_OBSERVATION1    = 0x2D,
+    PMW3610_POWER_UP_RESET  = 0x3A,
+    PMW3610_SPI_CLK_ON_REQ  = 0x41,
+    PMW3610_SPI_PAGE0       = 0x7F,
+    PMW3610_RES_STEP        = 0x85,
+    PMW3610_SPI_PAGE1       = 0xFF
 } pmw3610_reg_t;
 
 enum {
